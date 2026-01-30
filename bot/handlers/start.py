@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import User, Conversation, async_session
 from bot.states.conversation import ConversationStates
+from bot.keyboards.reply import get_main_keyboard
 
 router = Router()
 
@@ -91,7 +92,7 @@ async def cmd_start(message: Message, state: FSMContext):
 
 Начнем? Напишите ваш бюджет на покупку автомобиля (например: "2-3 млн руб" или "до 4 млн")"""
     
-    await message.answer(welcome_message)
+    await message.answer(welcome_message, reply_markup=get_main_keyboard())
     
     # Переходим к состоянию сбора бюджета
     await state.set_state(ConversationStates.ASKING_BUDGET)
@@ -116,7 +117,7 @@ async def cmd_help(message: Message):
 📞 +7 951 450-22-25 (Максим)
 💬 Telegram: @avtozakaz74
 """
-    await message.answer(help_text, parse_mode="HTML")
+    await message.answer(help_text, parse_mode="HTML", reply_markup=get_main_keyboard())
 
 
 @router.message(Command("cancel"))
@@ -143,5 +144,69 @@ async def cmd_cancel(message: Message, state: FSMContext):
     
     await message.answer(
         "❌ Диалог отменен.\n\n"
-        "Чтобы начать заново, используйте команду /start"
+        "Чтобы начать заново, используйте команду /start",
+        reply_markup=get_main_keyboard()
     )
+
+
+@router.message(F.text.in_(["🚗 Начать заново", "▶️ Старт"]))
+async def button_start(message: Message, state: FSMContext):
+    """Обработка кнопок Старт и Начать заново."""
+    # Очищаем состояние если есть
+    await state.clear()
+    
+    # Вызываем обработчик /start
+    await cmd_start(message, state)
+
+
+@router.message(F.text == "❌ Отменить")
+async def button_cancel(message: Message, state: FSMContext):
+    """Обработка кнопки Отменить."""
+    await cmd_cancel(message, state)
+
+
+@router.message(F.text == "ℹ️ Справка")
+async def button_help(message: Message):
+    """Обработка кнопки Справка."""
+    await cmd_help(message)
+
+
+@router.message(F.text == "📞 Контакты")
+async def button_contacts(message: Message):
+    """Обработка кнопки Контакты."""
+    contacts_text = """
+📞 <b>Контакты АвтоЗаказ74</b>
+
+<b>Телефон:</b>
++7 902 614 2503
+
+<b>Telegram канал:</b>
+https://t.me/avtozakaz74
+
+<b>Другие телефоны:</b>
+📞 +7 919 302-89-13 (Максим)
+📞 +7 951 450-22-25 (Максим)
+
+Мы работаем напрямую с экспортными компаниями в Китае, Японии и Корее! 🚗
+"""
+    await message.answer(contacts_text, parse_mode="HTML", reply_markup=get_main_keyboard())
+
+
+@router.message(F.text == "🌐 Подобрать авто на сайте")
+async def button_website(message: Message):
+    """Обработка кнопки Подобрать авто на сайте."""
+    website_text = """
+🌐 <b>Каталог автомобилей на сайте</b>
+
+Посмотрите наш каталог автомобилей из Китая:
+👉 https://avtozakaz74.ru/
+
+На сайте вы найдете:
+✅ Актуальные предложения
+✅ Детальные характеристики
+✅ Расчет стоимости с доставкой
+✅ Фотографии автомобилей
+
+Если нужна помощь с подбором - напишите нам! 🚗
+"""
+    await message.answer(website_text, parse_mode="HTML", reply_markup=get_main_keyboard())

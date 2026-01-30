@@ -7,6 +7,7 @@ from sqlalchemy import select
 
 from database import Conversation, Lead, async_session
 from bot.states.conversation import ConversationStates
+from bot.keyboards.reply import get_main_keyboard
 from config import ADMIN_IDS
 
 router = Router()
@@ -36,7 +37,8 @@ async def process_budget(message: Message, state: FSMContext):
     await message.answer(
         "Отлично! 👍\n\n"
         "Какие у вас предпочтения по автомобилю?\n"
-        "(Например: марка, тип кузова, год выпуска и т.д.)"
+        "(Например: марка, тип кузова, год выпуска и т.д.)",
+        reply_markup=get_main_keyboard()
     )
     
     await state.set_state(ConversationStates.ASKING_PREFERENCES)
@@ -64,7 +66,8 @@ async def process_preferences(message: Message, state: FSMContext):
     await message.answer(
         "Понял! 📝\n\n"
         "В какие сроки планируете покупку?\n"
-        "(Например: \"в течение месяца\", \"2-3 месяца\", \"не срочно\")"
+        "(Например: \"в течение месяца\", \"2-3 месяца\", \"не срочно\")",
+        reply_markup=get_main_keyboard()
     )
     
     await state.set_state(ConversationStates.ASKING_TIMELINE)
@@ -92,7 +95,8 @@ async def process_timeline(message: Message, state: FSMContext):
     await message.answer(
         "Спасибо! 🙏\n\n"
         "Есть ли у вас дополнительные комментарии или вопросы?\n"
-        "(Или напишите \"нет\", если дополнений нет)"
+        "(Или напишите \"нет\", если дополнений нет)",
+        reply_markup=get_main_keyboard()
     )
     
     await state.set_state(ConversationStates.ASKING_COMMENTS)
@@ -142,7 +146,8 @@ async def process_comments(message: Message, state: FSMContext):
     await message.answer(
         "✅ Отлично! Все данные получены.\n\n"
         "Наш менеджер свяжется с вами в ближайшее время! 👨‍💼\n\n"
-        "Если у вас появятся еще вопросы, используйте /start"
+        "Если у вас появятся еще вопросы, используйте /start",
+        reply_markup=get_main_keyboard()
     )
     
     await state.clear()
