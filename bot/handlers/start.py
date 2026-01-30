@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import User, Conversation, async_session
 from bot.states.conversation import ConversationStates
 from bot.keyboards.inline import get_main_inline_keyboard
+from bot.utils.validators import validate_deep_link
 
 router = Router()
 
@@ -18,27 +19,21 @@ router = Router()
 async def cmd_start(message: Message, state: FSMContext):
     """Обработка команды /start с deep link."""
     
-    # Парсинг deep link параметров
+    # Парсинг и валидация deep link параметров
     args = message.text.split(maxsplit=1)
-    source = None
+    source = "direct"
     source_detail = None
     
     if len(args) > 1:
         # Есть параметры deep link: /start channel_post123
         param = args[1]
+        validated_source, validated_detail = validate_deep_link(param)
         
-        if param.startswith("channel"):
-            source = "channel"
-            source_detail = param  # channel или channel_post123
-        elif param.startswith("site"):
-            source = "site"
-            # Извлекаем название сайта: site_avtozakaz74 -> avtozakaz74
-            source_detail = param.replace("site_", "")
-        else:
-            source = "direct"
-            source_detail = param
-    else:
-        source = "direct"
+        if validated_source is not None:
+            # Валидация прошла успешно
+            source = validated_source
+            source_detail = validated_detail
+        # else: если валидация не прошла, используем значения по умолчанию (direct, None)
     
     # Сохранение пользователя в БД
     async with async_session() as session:
@@ -73,14 +68,21 @@ async def cmd_start(message: Message, state: FSMContext):
                 state="STARTED"
             )
             session.add(conversation)
+        else:
+            # Переиспользуем существующий диалог, обновляя источник
+            conversation.source = source
+            conversation.source_detail = source_detail
+            conversation.state = "STARTED"
         
         await session.commit()
     
     # Формируем приветственное сообщение в зависимости от источника
     if source == "channel":
-        greeting = "👋 Привет! Вы пришли из нашего канала."
+        greeting = "📢 Привет! Вы пришли из нашего канала."
+    elif source == "group":
+        greeting = "👥 Привет! Вы пришли из нашей группы."
     elif source == "site":
-        greeting = f"👋 Привет! Вы пришли с сайта {source_detail}."
+        greeting = f"🌐 Привет! Вы пришли с сайта {source_detail}."
     else:
         greeting = "👋 Привет! Добро пожаловать в Avtozakaz74 Bot!"
     
