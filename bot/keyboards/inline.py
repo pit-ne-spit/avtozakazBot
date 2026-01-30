@@ -8,6 +8,7 @@ def get_main_inline_keyboard() -> InlineKeyboardMarkup:
     keyboard = [
         [
             InlineKeyboardButton(text="🚗 Начать заново", callback_data="start"),
+            InlineKeyboardButton(text="▶️ Старт", callback_data="start"),
         ],
         [
             InlineKeyboardButton(text="❌ Отменить", callback_data="cancel"),

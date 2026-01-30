@@ -1,6 +1,5 @@
 """Обработчик команды /start и deep links."""
 
-import logging
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery
@@ -11,9 +10,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import User, Conversation, async_session
 from bot.states.conversation import ConversationStates
 from bot.keyboards.inline import get_main_inline_keyboard
-from bot.utils.validators import validate_deep_link, get_source_info
-
-logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -21,80 +17,68 @@ router = Router()
 @router.message(CommandStart())
 async def cmd_start(message: Message, state: FSMContext):
     """Обработка команды /start с deep link."""
-    try:
-        # Парсинг deep link параметров
-        args = message.text.split(maxsplit=1)
-        source = "direct"
-        source_detail = None
-        
-        if len(args) > 1:
-            # Есть параметры deep link: /start channel_post123
-            param = args[1]
-            validated_source, validated_detail = validate_deep_link(param)
-            
-            if validated_source is None:
-                # Невалидный параметр, логируем и используем direct
-                logger.warning(f"Невалидный deep link от {message.from_user.id}: {param}")
-                source = "direct"
-                source_detail = None
-            else:
-                source = validated_source
-                source_detail = validated_detail
-        
-        # Сохранение пользователя в БД
-        async with async_session() as session:
-            # Проверяем, есть ли пользователь
-            result = await session.execute(
-                select(User).where(User.telegram_id == message.from_user.id)
-            )
-            user = result.scalar_one_or_none()
-            
-            if not user:
-                # Создаем нового пользователя
-                user = User(
-                    telegram_id=message.from_user.id,
-                    username=message.from_user.username,
-                    first_name=message.from_user.first_name,
-                    last_name=message.from_user.last_name
-                )
-                session.add(user)
-            
-            # Проверяем активный диалог (RACE CONDITION FIX)
-            result = await session.execute(
-                select(Conversation).where(Conversation.user_id == message.from_user.id)
-            )
-            conversation = result.scalar_one_or_none()
-            
-            if not conversation:
-                # Создаем новый диалог только если его нет
-                conversation = Conversation(
-                    user_id=message.from_user.id,
-                    source=source,
-                    source_detail=source_detail,
-                    state="STARTED"
-                )
-                session.add(conversation)
-                logger.info(f"Создан новый диалог для {message.from_user.id} из {get_source_info(source, source_detail)}")
-            else:
-                # Диалог уже активен, пересоздаем состояние
-                logger.info(f"Переиспользуется активный диалог для {message.from_user.id}")
-                await state.clear()
-            
-            await session.commit()
     
-    except Exception as e:
-        logger.error(f"Ошибка при обработке /start: {e}", exc_info=True)
-        await message.answer(
-            "❌ Произошла ошибка. Пожалуйста, попробуйте снова позже.",
-            reply_markup=get_main_inline_keyboard()
+    # Парсинг deep link параметров
+    args = message.text.split(maxsplit=1)
+    source = None
+    source_detail = None
+    
+    if len(args) > 1:
+        # Есть параметры deep link: /start channel_post123
+        param = args[1]
+        
+        if param.startswith("channel"):
+            source = "channel"
+            source_detail = param  # channel или channel_post123
+        elif param.startswith("site"):
+            source = "site"
+            # Извлекаем название сайта: site_avtozakaz74 -> avtozakaz74
+            source_detail = param.replace("site_", "")
+        else:
+            source = "direct"
+            source_detail = param
+    else:
+        source = "direct"
+    
+    # Сохранение пользователя в БД
+    async with async_session() as session:
+        # Проверяем, есть ли пользователь
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
         )
-        return
+        user = result.scalar_one_or_none()
+        
+        if not user:
+            # Создаем нового пользователя
+            user = User(
+                telegram_id=message.from_user.id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+                last_name=message.from_user.last_name
+            )
+            session.add(user)
+        
+        # Проверяем активный диалог
+        result = await session.execute(
+            select(Conversation).where(Conversation.user_id == message.from_user.id)
+        )
+        conversation = result.scalar_one_or_none()
+        
+        if not conversation:
+            # Создаем новый диалог
+            conversation = Conversation(
+                user_id=message.from_user.id,
+                source=source,
+                source_detail=source_detail,
+                state="STARTED"
+            )
+            session.add(conversation)
+        
+        await session.commit()
     
     # Формируем приветственное сообщение в зависимости от источника
     if source == "channel":
         greeting = "👋 Привет! Вы пришли из нашего канала."
-    elif source == "group":
-        greeting = "👋 Привет! Вы пришли из нашей группы."
     elif source == "site":
         greeting = f"👋 Привет! Вы пришли с сайта {source_detail}."
     else:
@@ -106,13 +90,9 @@ async def cmd_start(message: Message, state: FSMContext):
 
 Отвечу на несколько вопросов, чтобы лучше понять ваши потребности, и передам информацию нашему менеджеру.
 
-Начнем? Напишите ваш бюджет на покупку автомобиля (например: "2-3 млн руб" или "дo 4 млн")"""
+Начнем? Напишите ваш бюджет на покупку автомобиля (например: "2-3 млн руб" или "до 4 млн")"""
     
-    try:
-        await message.answer(welcome_message, reply_markup=get_main_inline_keyboard())
-    except Exception as e:
-        logger.error(f"Ошибка при отправке приветственного сообщения: {e}", exc_info=True)
-        return
+    await message.answer(welcome_message, reply_markup=get_main_inline_keyboard())
     
     # Переходим к состоянию сбора бюджета
     await state.set_state(ConversationStates.ASKING_BUDGET)

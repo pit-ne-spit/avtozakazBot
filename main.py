@@ -8,11 +8,14 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from config import BOT_TOKEN
 from database import init_db
 from bot.handlers import start, conversation
-from bot.utils.logging_config import setup_logging
 
 # Настройка логирования
-setup_logging()
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
+
 
 async def main():
     """Основная функция запуска бота."""
