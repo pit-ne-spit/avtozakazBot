@@ -141,6 +141,6 @@ https://t.me/YOUR_BOT_USERNAME?start=channel_post123
 Все ответы бота на русском языке согласно пользовательским правилам.
 
 ## Contact Information
-- Телефон: +7 902 614 2503
+- Телефон: +7 902 614-25-03 (Дмитрий)
 - Telegram: https://t.me/avtozakaz74
 - Сайт: https://avtozakaz74.ru/

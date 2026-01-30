@@ -114,7 +114,6 @@ async def cmd_help(message: Message):
 <b>Контакты:</b>
 📞 +7 902 614-25-03 (Дмитрий)
 📞 +7 919 302-89-13 (Максим)
-📞 +7 951 450-22-25 (Максим)
 💬 Telegram: @avtozakaz74
 """
     await message.answer(help_text, parse_mode="HTML", reply_markup=get_main_inline_keyboard())
@@ -183,7 +182,6 @@ async def callback_help(callback: CallbackQuery):
 <b>Контакты:</b>
 📞 +7 902 614-25-03 (Дмитрий)
 📞 +7 919 302-89-13 (Максим)
-📞 +7 951 450-22-25 (Максим)
 💬 Telegram: @avtozakaz74
 """
     await callback.message.answer(help_text, parse_mode="HTML", reply_markup=get_main_inline_keyboard())
@@ -197,14 +195,13 @@ async def callback_contacts(callback: CallbackQuery):
 📞 <b>Контакты АвтоЗаказ74</b>
 
 <b>Телефон:</b>
-+7 902 614 2503
++7 902 614-25-03
 
 <b>Telegram канал:</b>
 https://t.me/avtozakaz74
 
 <b>Другие телефоны:</b>
 📞 +7 919 302-89-13 (Максим)
-📞 +7 951 450-22-25 (Максим)
 
 Мы работаем напрямую с экспортными компаниями в Китае, Японии и Корее! 🚗
 """
