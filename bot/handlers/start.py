@@ -2,14 +2,14 @@
 
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message
+from aiogram.types import Message, CallbackQuery
 from aiogram.fsm.context import FSMContext
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import User, Conversation, async_session
 from bot.states.conversation import ConversationStates
-from bot.keyboards.reply import get_main_keyboard
+from bot.keyboards.inline import get_main_inline_keyboard
 
 router = Router()
 
@@ -92,7 +92,7 @@ async def cmd_start(message: Message, state: FSMContext):
 
 Начнем? Напишите ваш бюджет на покупку автомобиля (например: "2-3 млн руб" или "до 4 млн")"""
     
-    await message.answer(welcome_message, reply_markup=get_main_keyboard())
+    await message.answer(welcome_message, reply_markup=get_main_inline_keyboard())
     
     # Переходим к состоянию сбора бюджета
     await state.set_state(ConversationStates.ASKING_BUDGET)
@@ -117,7 +117,7 @@ async def cmd_help(message: Message):
 📞 +7 951 450-22-25 (Максим)
 💬 Telegram: @avtozakaz74
 """
-    await message.answer(help_text, parse_mode="HTML", reply_markup=get_main_keyboard())
+    await message.answer(help_text, parse_mode="HTML", reply_markup=get_main_inline_keyboard())
 
 
 @router.message(Command("cancel"))
@@ -144,36 +144,55 @@ async def cmd_cancel(message: Message, state: FSMContext):
     
     await message.answer(
         "❌ Диалог отменен.\n\n"
-        "Чтобы начать заново, используйте команду /start",
-        reply_markup=get_main_keyboard()
+        "Чтобы начать заново, используйте кнопки ниже или /start",
+        reply_markup=get_main_inline_keyboard()
     )
 
 
-@router.message(F.text.in_(["🚗 Начать заново", "▶️ Старт"]))
-async def button_start(message: Message, state: FSMContext):
-    """Обработка кнопок Старт и Начать заново."""
-    # Очищаем состояние если есть
+# Inline кнопки - обработчики callback
+
+@router.callback_query(F.data == "start")
+async def callback_start(callback: CallbackQuery, state: FSMContext):
+    """Обработка inline кнопок Старт и Начать заново."""
     await state.clear()
-    
-    # Вызываем обработчик /start
-    await cmd_start(message, state)
+    await callback.message.delete()
+    await cmd_start(callback.message, state)
+    await callback.answer()
 
 
-@router.message(F.text == "❌ Отменить")
-async def button_cancel(message: Message, state: FSMContext):
-    """Обработка кнопки Отменить."""
-    await cmd_cancel(message, state)
+@router.callback_query(F.data == "cancel")
+async def callback_cancel(callback: CallbackQuery, state: FSMContext):
+    """Обработка inline кнопки Отменить."""
+    await cmd_cancel(callback.message, state)
+    await callback.answer("Диалог отменен")
 
 
-@router.message(F.text == "ℹ️ Справка")
-async def button_help(message: Message):
-    """Обработка кнопки Справка."""
-    await cmd_help(message)
+@router.callback_query(F.data == "help")
+async def callback_help(callback: CallbackQuery):
+    """Обработка inline кнопки Справка."""
+    help_text = """
+ℹ️ <b>Справка по боту</b>
+
+Этот бот помогает с подбором автомобилей из Китая.
+
+<b>Доступные команды:</b>
+/start - Начать диалог заново
+/help - Показать эту справку
+/cancel - Отменить текущий диалог
+
+<b>Контакты:</b>
+📞 +7 902 614-25-03 (Дмитрий)
+📞 +7 919 302-89-13 (Максим)
+📞 +7 951 450-22-25 (Максим)
+💬 Telegram: @avtozakaz74
+"""
+    await callback.message.answer(help_text, parse_mode="HTML", reply_markup=get_main_inline_keyboard())
+    await callback.answer()
 
 
-@router.message(F.text == "📞 Контакты")
-async def button_contacts(message: Message):
-    """Обработка кнопки Контакты."""
+@router.callback_query(F.data == "contacts")
+async def callback_contacts(callback: CallbackQuery):
+    """Обработка inline кнопки Контакты."""
     contacts_text = """
 📞 <b>Контакты АвтоЗаказ74</b>
 
@@ -189,24 +208,5 @@ https://t.me/avtozakaz74
 
 Мы работаем напрямую с экспортными компаниями в Китае, Японии и Корее! 🚗
 """
-    await message.answer(contacts_text, parse_mode="HTML", reply_markup=get_main_keyboard())
-
-
-@router.message(F.text == "🌐 Подобрать авто на сайте")
-async def button_website(message: Message):
-    """Обработка кнопки Подобрать авто на сайте."""
-    website_text = """
-🌐 <b>Каталог автомобилей на сайте</b>
-
-Посмотрите наш каталог автомобилей из Китая:
-👉 https://avtozakaz74.ru/
-
-На сайте вы найдете:
-✅ Актуальные предложения
-✅ Детальные характеристики
-✅ Расчет стоимости с доставкой
-✅ Фотографии автомобилей
-
-Если нужна помощь с подбором - напишите нам! 🚗
-"""
-    await message.answer(website_text, parse_mode="HTML", reply_markup=get_main_keyboard())
+    await callback.message.answer(contacts_text, parse_mode="HTML", reply_markup=get_main_inline_keyboard())
+    await callback.answer()
