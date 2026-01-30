@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: avtozakaz_db
+    environment:
+      POSTGRES_USER: ${DB_USER:-avtozakaz}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-avtozakaz_secure_password}
+      POSTGRES_DB: ${DB_NAME:-avtozakaz_bot}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-avtozakaz}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - avtozakaz_network
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: avtozakaz_bot
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      ADMIN_IDS: ${ADMIN_IDS}
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-avtozakaz}:${DB_PASSWORD:-avtozakaz_secure_password}@postgres:5432/${DB_NAME:-avtozakaz_bot}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - avtozakaz_network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+    name: avtozakaz_postgres_data
+
+networks:
+  avtozakaz_network:
+    driver: bridge
