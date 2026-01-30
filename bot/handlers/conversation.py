@@ -1,5 +1,6 @@
 """Обработчики диалога с пользователем."""
 
+import logging
 from aiogram import Router, F
 from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
@@ -9,6 +10,8 @@ from database import Conversation, Lead, async_session
 from bot.states.conversation import ConversationStates
 from bot.keyboards.inline import get_main_inline_keyboard
 from config import ADMIN_IDS
+
+logger = logging.getLogger(__name__)
 
 router = Router()
 
@@ -105,23 +108,38 @@ async def process_timeline(message: Message, state: FSMContext):
 @router.message(ConversationStates.ASKING_COMMENTS)
 async def process_comments(message: Message, state: FSMContext):
     """Обработка комментариев и завершение диалога."""
-    comments = message.text if message.text.lower() not in ["нет", "no", "-"] else None
-    
-    await state.update_data(comments=comments)
-    
-    # Получаем все данные
-    data = await state.get_data()
-    
-    # Получаем информацию из БД
-    async with async_session() as session:
-        result = await session.execute(
-            select(Conversation).where(Conversation.user_id == message.from_user.id)
-        )
-        conversation = result.scalar_one_or_none()
+    try:
+        comments = message.text if message.text.lower() not in ["нет", "no", "-"] else None
         
-        if conversation:
+        await state.update_data(comments=comments)
+        
+        # Получаем все данные
+        data = await state.get_data()
+        
+        # Получаем информацию из БД
+        async with async_session() as session:
+            result = await session.execute(
+                select(Conversation).where(Conversation.user_id == message.from_user.id)
+            )
+            conversation = result.scalar_one_or_none()
+            
+            if not conversation:
+                logger.warning(f"Не найден диалог для {message.from_user.id}")
+                await message.answer(
+                    "❌ Ошибка. Не найден активный диалог. Попытайтесь начать снова.",
+                    reply_markup=get_main_inline_keyboard()
+                )
+                return
+            
             conversation.comments = comments
             conversation.state = "COMPLETED"
+            
+            # Детальное логирование источника
+            logger.info(
+                f"Создание лида для {message.from_user.id}: "
+                f"source={conversation.source}, "
+                f"source_detail={conversation.source_detail}"
+            )
             
             # Создаем лид
             lead = Lead(
@@ -135,6 +153,10 @@ async def process_comments(message: Message, state: FSMContext):
                 comments=comments
             )
             session.add(lead)
+            logger.info(
+                f"Сохранен новый лид от {message.from_user.id}: "
+                f"lead.source={lead.source}, lead.source_detail={lead.source_detail}"
+            )
             
             # Удаляем активный диалог
             await session.delete(conversation)
@@ -142,6 +164,14 @@ async def process_comments(message: Message, state: FSMContext):
             
             # Отправляем уведомление менеджерам
             await send_lead_to_admins(message, lead)
+    
+    except Exception as e:
+        logger.error(f"Ошибка при обработке комментариев {message.from_user.id}: {e}", exc_info=True)
+        await message.answer(
+            "❌ Ошибка при сохранении данных. Наш менеджер свяжется с вами во всяком случае.",
+            reply_markup=get_main_inline_keyboard()
+        )
+        return
     
     await message.answer(
         "✅ Отлично! Все данные получены.\n\n"
@@ -161,6 +191,8 @@ async def send_lead_to_admins(message: Message, lead: Lead):
         source_text = f"🌐 Сайт: {lead.source_detail}"
     elif lead.source == "channel":
         source_text = f"📢 Канал: {lead.source_detail}"
+    elif lead.source == "group":
+        source_text = "👥 Группа Telegram"
     else:
         source_text = "🔗 Прямой переход"
     

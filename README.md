@@ -69,25 +69,41 @@ python main.py
 
 ## 🔗 Deep Links для интеграции
 
-### Ссылка из канала:
-```
-https://t.me/yourbot?start=channel
-https://t.me/yourbot?start=channel_post123
-```
+Используйте these deep links для отслеживания источников лидов:
 
-### Ссылка с сайта:
+### 📢 Из Канала Telegram
 ```
-https://t.me/yourbot?start=site_avtozakaz74
+https://t.me/avtozakaz74_bot?start=channel
+https://t.me/avtozakaz74_bot?start=channel_post123
 ```
+Пример: нажима на долгую ссылку в канале и выберите "Ответить", тогда бот отправит вас с этой ссылкой.
 
-### Интеграция на сайте:
+### 👥 Из Группы Telegram
+```
+https://t.me/avtozakaz74_bot?start=group
+```
+Пример: добавьте эту ссылку в оснащение группы или допишите бота в группы с этой ссылкой.
 
-Добавьте кнопку на сайт:
+### 🌐 С Контактной Страницы Сайта
+```
+https://t.me/avtozakaz74_bot?start=site_avtozakaz74
+```
+Пример HTML нля вставки на сайт:
 ```html
+<!-- Кнопка на сайте -->
 <a href="https://t.me/avtozakaz74_bot?start=site_avtozakaz74" 
-   class="btn btn-primary">
-   Написать в Telegram
+   class="btn btn-primary" 
+   target="_blank" 
+   rel="noopener noreferrer">
+   💬 Написать в Telegram
 </a>
+```
+
+### 🔗 Прямой Переход
+Это также работает, если пользователь фанд бота директно:
+```
+https://t.me/avtozakaz74_bot
+https://t.me/avtozakaz74_bot?start=direct
 ```
 
 ## 📊 Структура проекта
