@@ -8,6 +8,7 @@ from sqlalchemy import select
 from database import Conversation, Lead, async_session
 from bot.states.conversation import ConversationStates
 from bot.keyboards.inline import get_main_inline_keyboard
+from bot.utils.validators import format_source_for_display
 from config import ADMIN_IDS
 
 router = Router()
@@ -156,13 +157,8 @@ async def process_comments(message: Message, state: FSMContext):
 async def send_lead_to_admins(message: Message, lead: Lead):
     """Отправка информации о лиде менеджерам."""
     
-    # Определяем источник
-    if lead.source == "site":
-        source_text = f"🌐 Сайт: {lead.source_detail}"
-    elif lead.source == "channel":
-        source_text = f"📢 Канал: {lead.source_detail}"
-    else:
-        source_text = "🔗 Прямой переход"
+    # Определяем источник используя форматер
+    source_text = format_source_for_display(lead.source, lead.source_detail)
     
     # Формируем сообщение
     username = f"@{lead.username}" if lead.username else "без username"
