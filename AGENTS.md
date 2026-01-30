@@ -4,7 +4,7 @@ This file provides guidance to WARP (warp.dev) when working with code in this re
 
 ## Project Overview
 
-Telegram бот для автоматизации приема заявок на подбор автомобилей из Китая. Бот собирает информацию от пользователей через интерактивный диалог и отправляет сформированные лиды менеджерам.
+Telegram бот для автоматизации приема заявок на подбор автомобилей из Китая. Бот собирает информацию от пользователей через интерактивный диалог с Inline клавиатурой и отправляет сформированные лиды нескольким менеджерам.
 
 ## Essential Commands
 
@@ -81,8 +81,15 @@ dp.include_router(conversation.router)
 ### Configuration
 `config.py` загружает настройки из `.env`:
 - `BOT_TOKEN` - обязательный, валидируется при запуске
-- `ADMIN_IDS` - comma-separated list, преобразуется в `list[int]`
+- `ADMIN_IDS` - comma-separated list, преобразуется в `list[int]` (поддерживается несколько администраторов)
 - `DATABASE_URL` - по умолчанию SQLite с aiosqlite драйвером
+
+### Inline Keyboard
+Бот использует Inline клавиатуру (`bot/keyboards/inline.py`):
+- Кнопки отображаются прямо под сообщениями бота
+- Обработчики используют `@router.callback_query()` вместо `@router.message()`
+- Кнопка "Подобрать авто на сайте" - URL кнопка, открывает https://avtozakaz74.ru/
+- Reply клавиатура (`bot/keyboards/reply.py`) больше не используется
 
 ## Development Patterns
 
@@ -121,5 +128,19 @@ https://t.me/YOUR_BOT_USERNAME?start=channel_post123
 ```
 Можно генерировать уникальные идентификаторы постов для детальной аналитики.
 
+## Database Access
+База данных SQLite расположена в `bot.db` в корне проекта.
+Можно просматривать в DBeaver или любом SQLite клиенте.
+
+**Таблицы:**
+- `users` - все пользователи
+- `conversations` - активные диалоги
+- `leads` - завершенные заявки
+
 ## Response Language
 Все ответы бота на русском языке согласно пользовательским правилам.
+
+## Contact Information
+- Телефон: +7 902 614 2503
+- Telegram: https://t.me/avtozakaz74
+- Сайт: https://avtozakaz74.ru/
